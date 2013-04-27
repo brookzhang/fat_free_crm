@@ -1,20 +1,8 @@
-# Fat Free CRM
-# Copyright (C) 2008-2011 by Michael Dvorkin
+# Copyright (c) 2008-2013 Michael Dvorkin and contributors.
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# Fat Free CRM is freely distributable under the terms of MIT license.
+# See MIT-LICENSE file or http://www.opensource.org/licenses/mit-license.php
 #------------------------------------------------------------------------------
-
 class OpportunitiesController < EntitiesController
   before_filter :load_settings
   before_filter :get_data_for_sidebar, :only => :index
@@ -23,29 +11,27 @@ class OpportunitiesController < EntitiesController
   # GET /opportunities
   #----------------------------------------------------------------------------
   def index
-    @opportunities = get_opportunities(:page => params[:page])
-    
+    @opportunities = get_opportunities(:page => params[:page], :per_page => params[:per_page])
+
     respond_with @opportunities do |format|
       format.xls { render :layout => 'header' }
+      format.csv { render :csv => @opportunities }
     end
   end
 
   # GET /opportunities/1
+  # AJAX /opportunities/1
   #----------------------------------------------------------------------------
   def show
-    respond_with(@opportunity) do |format|
-      format.html do
-        @comment = Comment.new
-        @timeline = timeline(@opportunity)
-      end
-    end
+    @comment = Comment.new
+    @timeline = timeline(@opportunity)
+    respond_with(@opportunity)
   end
 
   # GET /opportunities/new
   #----------------------------------------------------------------------------
   def new
-    @opportunity.attributes = {:user => current_user, :stage => "prospecting", :access => Setting.default_access, :assigned_to => nil}
-    @users       = User.except(current_user)
+    @opportunity.attributes = {:user => current_user, :stage => Opportunity.default_stage, :access => Setting.default_access, :assigned_to => nil}
     @account     = Account.new(:user => current_user, :access => Setting.default_access)
     @accounts    = Account.my.order('name')
 
@@ -64,7 +50,6 @@ class OpportunitiesController < EntitiesController
   # GET /opportunities/1/edit                                              AJAX
   #----------------------------------------------------------------------------
   def edit
-    @users = User.except(current_user)
     @account  = @opportunity.account || Account.new(:user => current_user)
     @accounts = Account.my.order('name')
 
@@ -91,7 +76,6 @@ class OpportunitiesController < EntitiesController
           get_data_for_sidebar(:campaign)
         end
       else
-        @users = User.except(current_user)
         @accounts = Account.my.order('name')
         unless params[:account][:id].blank?
           @account = Account.find(params[:account][:id])
@@ -121,7 +105,6 @@ class OpportunitiesController < EntitiesController
           get_data_for_sidebar(:campaign)
         end
       else
-        @users = User.except(current_user)
         @accounts = Account.my.order('name')
         if @opportunity.account
           @account = Account.find(@opportunity.account.id)
@@ -160,28 +143,24 @@ class OpportunitiesController < EntitiesController
   #----------------------------------------------------------------------------
   # Handled by ApplicationController :auto_complete
 
-  # GET /opportunities/options                                             AJAX
-  #----------------------------------------------------------------------------
-  def options
-    unless params[:cancel].true?
-      @per_page = current_user.pref[:opportunities_per_page] || Opportunity.per_page
-      @outline  = current_user.pref[:opportunities_outline]  || Opportunity.outline
-      @sort_by  = current_user.pref[:opportunities_sort_by]  || Opportunity.sort_by
-    end
-  end
-
   # POST /opportunities/redraw                                             AJAX
   #----------------------------------------------------------------------------
   def redraw
-    @opportunities = get_opportunities(:page => 1)
-    render :index
+    @opportunities = get_opportunities(:page => 1, :per_page => params[:per_page])
+    set_options # Refresh options
+    
+    respond_with(@opportunities) do |format|
+      format.js { render :index }
+    end
   end
 
   # POST /opportunities/filter                                             AJAX
   #----------------------------------------------------------------------------
   def filter
-    @opportunities = get_opportunities(:page => 1)
-    render :index
+    @opportunities = get_opportunities(:page => 1, :per_page => params[:per_page])
+    respond_with(@opportunities) do |format|
+      format.js { render :index }
+    end
   end
 
 private
@@ -232,7 +211,6 @@ private
   #----------------------------------------------------------------------------
   def set_params
     current_user.pref[:opportunities_per_page] = params[:per_page] if params[:per_page]
-    current_user.pref[:opportunities_outline]  = params[:outline]  if params[:outline]
     current_user.pref[:opportunities_sort_by]  = Opportunity::sort_by_map[params[:sort_by]] if params[:sort_by]
     session[:opportunities_filter] = params[:stage] if params[:stage]
   end

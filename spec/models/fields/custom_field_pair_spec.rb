@@ -1,20 +1,8 @@
-# Fat Free CRM
-# Copyright (C) 2008-2011 by Michael Dvorkin
+# Copyright (c) 2008-2013 Michael Dvorkin and contributors.
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# Fat Free CRM is freely distributable under the terms of MIT license.
+# See MIT-LICENSE file or http://www.opensource.org/licenses/mit-license.php
 #------------------------------------------------------------------------------
-
 require 'spec_helper'
 
 describe CustomFieldPair do
@@ -37,9 +25,9 @@ describe CustomFieldPair do
   
     it "should create the pair" do
       params1 = @field.merge(@pair1)
-      foo1 = mock(:id => 3)
+      foo1 = mock(:id => 3, :required => true, :disabled => 'false')
       CustomFieldFooPair.should_receive(:create).with( params1 ).and_return(foo1)
-      params2 = @field.merge(@pair2).merge('pair_id' => 3)
+      params2 = @field.merge(@pair2).merge('pair_id' => 3, 'required' => true, 'disabled' => 'false')
       foo2 = mock(:id => 5)
       CustomFieldFooPair.should_receive(:create).with( params2 ).and_return(foo2)
 
@@ -58,10 +46,10 @@ describe CustomFieldPair do
     end
 
     it "should update the pair" do
-      foo1 = mock
+      foo1 = mock(:required => true, :disabled => 'false')
       foo1.should_receive(:update_attributes).with( @field.merge(@pair1) )
       foo2 = mock
-      foo2.should_receive(:update_attributes).with( @field.merge(@pair2) )
+      foo2.should_receive(:update_attributes).with( @field.merge(@pair2).merge('required' => true, 'disabled' => 'false') )
       foo1.should_receive(:paired_with).and_return(foo2)
       CustomFieldPair.should_receive(:find).with('3').and_return(foo1)
 

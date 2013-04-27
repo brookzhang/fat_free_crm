@@ -1,43 +1,30 @@
-# Fat Free CRM
-# Copyright (C) 2008-2011 by Michael Dvorkin
+# Copyright (c) 2008-2013 Michael Dvorkin and contributors.
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# Fat Free CRM is freely distributable under the terms of MIT license.
+# See MIT-LICENSE file or http://www.opensource.org/licenses/mit-license.php
 #------------------------------------------------------------------------------
-
 class AccountsController < EntitiesController
   before_filter :get_data_for_sidebar, :only => :index
-  
+
   # GET /accounts
   #----------------------------------------------------------------------------
   def index
-    @accounts = get_accounts(:page => params[:page])
-    
+    @accounts = get_accounts(:page => params[:page], :per_page => params[:per_page])
+
     respond_with @accounts do |format|
       format.xls { render :layout => 'header' }
+      format.csv { render :csv => @accounts }
     end
   end
 
   # GET /accounts/1
+  # AJAX /accounts/1
   #----------------------------------------------------------------------------
   def show
-    respond_with(@account) do |format|
-      format.html do
-        @stage = Setting.unroll(:opportunity_stage)
-        @comment = Comment.new
-        @timeline = timeline(@account)
-      end
-    end
+    @stage = Setting.unroll(:opportunity_stage)
+    @comment = Comment.new
+    @timeline = timeline(@account)
+    respond_with(@account)
   end
 
   # GET /accounts/new
@@ -82,11 +69,9 @@ class AccountsController < EntitiesController
   #----------------------------------------------------------------------------
   def update
     respond_with(@account) do |format|
-      if @account.update_attributes(params[:account])
-        get_data_for_sidebar
-      else
-        @users = User.except(current_user) # Need it to redraw [Edit Account] form.
-      end
+      # Must set access before user_ids, because user_ids= method depends on access value.
+      @account.access = params[:account][:access] if params[:account][:access]
+      get_data_for_sidebar if @account.update_attributes(params[:account])
     end
   end
 
@@ -113,32 +98,28 @@ class AccountsController < EntitiesController
   #----------------------------------------------------------------------------
   # Handled by ApplicationController :auto_complete
 
-  # GET /accounts/options                                                  AJAX
-  #----------------------------------------------------------------------------
-  def options
-    unless params[:cancel].true?
-      @per_page = current_user.pref[:accounts_per_page] || Account.per_page
-      @outline  = current_user.pref[:accounts_outline]  || Account.outline
-      @sort_by  = current_user.pref[:accounts_sort_by]  || Account.sort_by
-    end
-  end
-
   # POST /accounts/redraw                                                  AJAX
   #----------------------------------------------------------------------------
   def redraw
     current_user.pref[:accounts_per_page] = params[:per_page] if params[:per_page]
-    current_user.pref[:accounts_outline]  = params[:outline]  if params[:outline]
     current_user.pref[:accounts_sort_by]  = Account::sort_by_map[params[:sort_by]] if params[:sort_by]
-    @accounts = get_accounts(:page => 1)
-    render :index
+    @accounts = get_accounts(:page => 1, :per_page => params[:per_page])
+    set_options # Refresh options
+    
+    respond_with(@accounts) do |format|
+      format.js { render :index }
+    end
   end
 
   # POST /accounts/filter                                                  AJAX
   #----------------------------------------------------------------------------
   def filter
     session[:accounts_filter] = params[:category]
-    @accounts = get_accounts(:page => 1)
-    render :index
+    @accounts = get_accounts(:page => 1, :per_page => params[:per_page])
+    
+    respond_with(@accounts) do |format|
+      format.js { render :index }
+    end
   end
 
 private

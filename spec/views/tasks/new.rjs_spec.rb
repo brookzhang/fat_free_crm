@@ -1,3 +1,8 @@
+# Copyright (c) 2008-2013 Michael Dvorkin and contributors.
+#
+# Fat Free CRM is freely distributable under the terms of MIT license.
+# See MIT-LICENSE file or http://www.opensource.org/licenses/mit-license.php
+#------------------------------------------------------------------------------
 require File.expand_path(File.dirname(__FILE__) + '/../../spec_helper')
 
 describe "/tasks/new" do
@@ -29,22 +34,6 @@ describe "/tasks/new" do
         with_tag("form[class=new_task]")
       end
       rendered.should include('crm.flip_form("create_task");')
-    end
-
-    it "should call JavaScript functions to load Calendar popup without time selector" do
-      params[:cancel] = nil
-      Setting.task_calendar_with_time = false
-      render
-
-      rendered.should include('crm.date_select_popup("task_calendar", "task_bucket", false)')
-    end
-
-    it "should call JavaScript functions to load Calendar popup with time selector" do
-      params[:cancel] = nil
-      Setting.task_calendar_with_time = true
-      render
-
-      rendered.should include('crm.date_select_popup("task_calendar", "task_bucket", true)')
     end
   end
 

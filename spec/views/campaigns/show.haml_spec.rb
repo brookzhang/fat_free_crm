@@ -1,3 +1,8 @@
+# Copyright (c) 2008-2013 Michael Dvorkin and contributors.
+#
+# Fat Free CRM is freely distributable under the terms of MIT license.
+# See MIT-LICENSE file or http://www.opensource.org/licenses/mit-license.php
+#------------------------------------------------------------------------------
 require File.expand_path(File.dirname(__FILE__) + '/../../spec_helper')
 
 describe "/campaigns/show" do
@@ -12,6 +17,7 @@ describe "/campaigns/show" do
     assign(:users, [ current_user ])
     assign(:comment, Comment.new)
     assign(:timeline, [ FactoryGirl.create(:comment, :commentable => @campaign) ])
+    view.stub(:params) { {:id => 123} }
   end
 
   it "should render campaign landing page" do
@@ -19,10 +25,8 @@ describe "/campaigns/show" do
     view.should render_template(:partial => "comments/_new")
     view.should render_template(:partial => "shared/_timeline")
     view.should render_template(:partial => "shared/_tasks")
-
-    # XXX: Not rendering due to paginate
-    #~ view.should render_template(:partial => "leads/_lead")
-    #~ view.should render_template(:partial => "opportunities/_opportunity")
+    view.should render_template(:partial => "leads/_leads")
+    view.should render_template(:partial => "opportunities/_opportunities")
 
     rendered.should have_tag("div[id=edit_campaign]")
   end

@@ -1,34 +1,29 @@
-# Fat Free CRM
-# Copyright (C) 2008-2011 by Michael Dvorkin
+# Copyright (c) 2008-2013 Michael Dvorkin and contributors.
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# Fat Free CRM is freely distributable under the terms of MIT license.
+# See MIT-LICENSE file or http://www.opensource.org/licenses/mit-license.php
 #------------------------------------------------------------------------------
-
 class CampaignsController < EntitiesController
   before_filter :get_data_for_sidebar, :only => :index
 
   # GET /campaigns
   #----------------------------------------------------------------------------
   def index
-    @campaigns = get_campaigns(:page => params[:page])
-    
+    @campaigns = get_campaigns(:page => params[:page], :per_page => params[:per_page])
+
     respond_with @campaigns do |format|
       format.xls { render :layout => 'header' }
+      format.csv { render :csv => @campaigns }
     end
   end
 
   # GET /campaigns/1
+  # AJAX /campaigns/1
+  # XLS /campaigns/1
+  # XLS /campaigns/1
+  # CSV /campaigns/1
+  # RSS /campaigns/1
+  # ATOM /campaigns/1
   #----------------------------------------------------------------------------
   def show
     respond_with(@campaign) do |format|
@@ -38,20 +33,26 @@ class CampaignsController < EntitiesController
         @timeline = timeline(@campaign)
       end
       
+      format.js do
+        @stage = Setting.unroll(:opportunity_stage)
+        @comment = Comment.new
+        @timeline = timeline(@campaign)
+      end
+
       format.xls do
         @leads = @campaign.leads
         render '/leads/index', :layout => 'header'
       end
-      
+
       format.csv do
         render :csv => @campaign.leads
       end
-      
+
       format.rss do
         @items  = "leads"
         @assets = @campaign.leads
       end
-      
+
       format.atom do
         @items  = "leads"
         @assets = @campaign.leads
@@ -106,11 +107,9 @@ class CampaignsController < EntitiesController
   #----------------------------------------------------------------------------
   def update
     respond_with(@campaign) do |format|
-      if @campaign.update_attributes(params[:campaign])
-        get_data_for_sidebar if called_from_index_page?
-      else
-        @users = User.except(current_user) # Need it to redraw [Edit Campaign] form.
-      end
+      # Must set access before user_ids, because user_ids= method depends on access value.
+      @campaign.access = params[:campaign][:access] if params[:campaign][:access]
+      get_data_for_sidebar if @campaign.update_attributes(params[:campaign]) and called_from_index_page?
     end
   end
 
@@ -137,32 +136,28 @@ class CampaignsController < EntitiesController
   #----------------------------------------------------------------------------
   # Handled by ApplicationController :auto_complete
 
-  # GET /campaigns/options                                                 AJAX
-  #----------------------------------------------------------------------------
-  def options
-    unless params[:cancel].true?
-      @per_page = current_user.pref[:campaigns_per_page] || Campaign.per_page
-      @outline  = current_user.pref[:campaigns_outline]  || Campaign.outline
-      @sort_by  = current_user.pref[:campaigns_sort_by]  || Campaign.sort_by
-    end
-  end
-
   # POST /campaigns/redraw                                                 AJAX
   #----------------------------------------------------------------------------
   def redraw
     current_user.pref[:campaigns_per_page] = params[:per_page] if params[:per_page]
-    current_user.pref[:campaigns_outline]  = params[:outline]  if params[:outline]
     current_user.pref[:campaigns_sort_by]  = Campaign::sort_by_map[params[:sort_by]] if params[:sort_by]
-    @campaigns = get_campaigns(:page => 1)
-    render :index
+    @campaigns = get_campaigns(:page => 1, :per_page => params[:per_page])
+    set_options # Refresh options
+    
+    respond_with(@campaigns) do |format|
+      format.js { render :index }
+    end
   end
 
   # POST /campaigns/filter                                                 AJAX
   #----------------------------------------------------------------------------
   def filter
     session[:campaigns_filter] = params[:status]
-    @campaigns = get_campaigns(:page => 1)
-    render :index
+    @campaigns = get_campaigns(:page => 1, :per_page => params[:per_page])
+    
+    respond_with(@campaigns) do |format|
+      format.js { render :index }
+    end
   end
 
 private

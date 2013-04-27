@@ -1,24 +1,12 @@
-# Fat Free CRM
-# Copyright (C) 2008-2011 by Michael Dvorkin
+# Copyright (c) 2008-2013 Michael Dvorkin and contributors.
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# Fat Free CRM is freely distributable under the terms of MIT license.
+# See MIT-LICENSE file or http://www.opensource.org/licenses/mit-license.php
 #------------------------------------------------------------------------------
-
 class CommentsController < ApplicationController
   before_filter :require_user
 
-  COMMENTABLE = %w(account_id campaign_id contact_id lead_id opportunity_id task_id).freeze
+
 
   # GET /comments
   # GET /comments.json
@@ -77,7 +65,9 @@ class CommentsController < ApplicationController
   # POST /comments.xml                                                     AJAX
   #----------------------------------------------------------------------------
   def create
-    @comment = Comment.new(params[:comment])
+    attributes = params[:comment] || {}
+    attributes.merge!(:user_id => current_user.id)
+    @comment = Comment.new(attributes)
 
     # Make sure commentable object exists and is accessible to the current user.
     model, id = @comment.commentable_type, @comment.commentable_id
@@ -113,8 +103,7 @@ private
 
   #----------------------------------------------------------------------------
   def extract_commentable_name(params)
-    commentable = (params.keys & COMMENTABLE).first
-    commentable.sub('_id', '') if commentable
+    params.keys.detect {|x| x =~ /_id$/ }.try(:sub, /_id$/, '')
   end
 
   #----------------------------------------------------------------------------
