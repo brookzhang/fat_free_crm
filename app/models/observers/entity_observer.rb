@@ -1,3 +1,8 @@
+# Copyright (c) 2008-2013 Michael Dvorkin and contributors.
+#
+# Fat Free CRM is freely distributable under the terms of MIT license.
+# See MIT-LICENSE file or http://www.opensource.org/licenses/mit-license.php
+#------------------------------------------------------------------------------
 class EntityObserver < ActiveRecord::Observer
   observe :account, :contact, :lead, :opportunity
 
@@ -14,7 +19,7 @@ class EntityObserver < ActiveRecord::Observer
   private
 
   def send_notification_to_assignee(item)
-    UserMailer.assigned_entity_notification(item, current_user) if item.assignee.present? && current_user.present?
+    UserMailer.assigned_entity_notification(item, current_user).deliver if item.assignee.present? && current_user.present?
   end
 
   def current_user

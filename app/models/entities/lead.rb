@@ -1,20 +1,8 @@
-# Fat Free CRM
-# Copyright (C) 2008-2011 by Michael Dvorkin
+# Copyright (c) 2008-2013 Michael Dvorkin and contributors.
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# Fat Free CRM is freely distributable under the terms of MIT license.
+# See MIT-LICENSE file or http://www.opensource.org/licenses/mit-license.php
 #------------------------------------------------------------------------------
-
 # == Schema Information
 #
 # Table name: leads
@@ -55,6 +43,7 @@ class Lead < ActiveRecord::Base
   has_one     :contact, :dependent => :nullify # On destroy keep the contact, but nullify its lead_id
   has_many    :tasks, :as => :asset, :dependent => :destroy#, :order => 'created_at DESC'
   has_one     :business_address, :dependent => :destroy, :as => :addressable, :class_name => "Address", :conditions => "address_type='Business'"
+  has_many    :addresses, :dependent => :destroy, :as => :addressable, :class_name => "Address" # advanced search uses this
   has_many    :emails, :as => :mediator
 
   serialize :subscribed_users, Set
@@ -80,7 +69,10 @@ class Lead < ActiveRecord::Base
   exportable
   sortable :by => [ "first_name ASC", "last_name ASC", "company ASC", "rating DESC", "created_at DESC", "updated_at DESC" ], :default => "created_at DESC"
 
-  validates_presence_of :first_name, :message => :missing_first_name
+  has_ransackable_associations %w(contact campaign tasks tags activities emails addresses comments)
+  ransack_can_autocomplete
+
+  validates_presence_of :first_name, :message => :missing_first_name if Setting.require_first_names
   validates_presence_of :last_name, :message => :missing_last_name if Setting.require_last_names
   validate :users_for_shared_access
 
@@ -89,8 +81,7 @@ class Lead < ActiveRecord::Base
 
   # Default values provided through class methods.
   #----------------------------------------------------------------------------
-  def self.per_page ; 20                  ; end
-  def self.outline  ; "long"              ; end
+  def self.per_page ; 20 ; end
   def self.first_name_position ; "before" ; end
 
   # Save the lead along with its permissions.
@@ -111,7 +102,7 @@ class Lead < ActiveRecord::Base
     ActiveSupport::Deprecation.warn "lead.update_with_permissions is deprecated and may be removed from future releases, use user_ids and group_ids inside attributes instead and call lead.update_with_lead_counters"
     update_with_lead_counters(attributes)
   end
-  
+
   # Update lead attributes taking care of campaign lead counters when necessary.
   #----------------------------------------------------------------------------
   def update_with_lead_counters(attributes)

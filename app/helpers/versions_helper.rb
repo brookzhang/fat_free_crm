@@ -1,20 +1,8 @@
-# Fat Free CRM
-# Copyright (C) 2008-2011 by Michael Dvorkin
+# Copyright (c) 2008-2013 Michael Dvorkin and contributors.
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# Fat Free CRM is freely distributable under the terms of MIT license.
+# See MIT-LICENSE file or http://www.opensource.org/licenses/mit-license.php
 #------------------------------------------------------------------------------
-
 module VersionsHelper
 
   # Parse the changes for each version
@@ -29,17 +17,17 @@ module VersionsHelper
       first = change.first
       second = change.second
     end
-    [label, first, second]
-  end
 
-  # Parse the version record for when a contact's account has changed.
-  #----------------------------------------------------------------------------
-  def parse_account_contact_version(version)
-    label = t('contacts_account')
-    old_id, new_id = version.changeset[:account_contact_id]
-    old_name, new_name = version.changeset[:account_contact_name]
-    first  = old_id.nil? ? nil : link_to(h(old_name), account_path(:id => old_id))
-    second = new_id.nil? ? nil : link_to(h(new_name), account_path(:id => new_id))
+    # Find account and link to it.
+    if attr_name == 'account_id'
+      if first.present? and (account = Account.find_by_id(first))
+        first = link_to(h(account.name), account_path(account))
+      end
+      if second.present? and (account = Account.find_by_id(second))
+        second  = link_to(h(account.name), account_path(account))
+      end
+    end
+
     [label, first, second]
   end
 

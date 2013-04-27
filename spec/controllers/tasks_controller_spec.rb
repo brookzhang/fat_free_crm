@@ -1,3 +1,8 @@
+# Copyright (c) 2008-2013 Michael Dvorkin and contributors.
+#
+# Fat Free CRM is freely distributable under the terms of MIT license.
+# See MIT-LICENSE file or http://www.opensource.org/licenses/mit-license.php
+#------------------------------------------------------------------------------
 require File.expand_path(File.dirname(__FILE__) + '/../spec_helper')
 
 describe TasksController do
@@ -74,9 +79,7 @@ describe TasksController do
 
       it "should render all tasks as JSON for #{view} view" do
         @tasks = produce_tasks(current_user, view)
-
-        request.env["HTTP_ACCEPT"] = "application/json"
-        get :index, :view => view
+        get :index, :view => view, :format => :json
 
         (assigns[:tasks].keys.map(&:to_sym) - @tasks.keys).should == []
         (assigns[:tasks].values.flatten - @tasks.values.flatten).should == []
@@ -93,9 +96,7 @@ describe TasksController do
 
       it "should render all tasks as xml for #{view} view" do
         @tasks = produce_tasks(current_user, view)
-
-        request.env["HTTP_ACCEPT"] = "application/xml"
-        get :index, :view => view
+        get :index, :view => view, :format => :xml
 
         (assigns[:tasks].keys.map(&:to_sym) - @tasks.keys).should == []
         (assigns[:tasks].values.flatten - @tasks.values.flatten).should == []
@@ -147,13 +148,11 @@ describe TasksController do
       account = FactoryGirl.create(:account, :user => current_user)
       @task = FactoryGirl.build(:task, :user => current_user, :asset => account)
       Task.stub!(:new).and_return(@task)
-      @users = [ FactoryGirl.create(:user) ]
       @bucket = Setting.unroll(:task_bucket)[1..-1] << [ "On Specific Date...", :specific_time ]
       @category = Setting.unroll(:task_category)
 
       xhr :get, :new
       assigns[:task].should == @task
-      assigns[:users].should == @users
       assigns[:bucket].should == @bucket
       assigns[:category].should == @category
       response.should render_template("tasks/new")
@@ -194,13 +193,11 @@ describe TasksController do
     it "should expose the requested task as @task and render [edit] template" do
       @asset = FactoryGirl.create(:account, :user => current_user)
       @task = FactoryGirl.create(:task, :user => current_user, :asset => @asset)
-      @users = [ FactoryGirl.create(:user) ]
       @bucket = Setting.unroll(:task_bucket)[1..-1] << [ "On Specific Date...", :specific_time ]
       @category = Setting.unroll(:task_category)
 
       xhr :get, :edit, :id => @task.id
       assigns[:task].should == @task
-      assigns[:users].should == @users
       assigns[:bucket].should == @bucket
       assigns[:category].should == @category
       assigns[:asset].should == @asset

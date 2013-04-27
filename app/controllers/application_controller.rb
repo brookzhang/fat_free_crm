@@ -1,20 +1,8 @@
-# Fat Free CRM
-# Copyright (C) 2008-2011 by Michael Dvorkin
+# Copyright (c) 2008-2013 Michael Dvorkin and contributors.
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# Fat Free CRM is freely distributable under the terms of MIT license.
+# See MIT-LICENSE file or http://www.opensource.org/licenses/mit-license.php
 #------------------------------------------------------------------------------
-
 class ApplicationController < ActionController::Base
 
   before_filter :set_context
@@ -40,18 +28,39 @@ class ApplicationController < ActionController::Base
     @query = params[:auto_complete_query] || ''
     @auto_complete = hook(:auto_complete, self, :query => @query, :user => current_user)
     if @auto_complete.empty?
-      @auto_complete = klass.my.text_search(@query).limit(10)
+      exclude_ids = auto_complete_ids_to_exclude(params[:related])
+      @auto_complete = klass.my.text_search(@query).search(:id_not_in => exclude_ids).result.limit(10)
     else
       @auto_complete = @auto_complete.last
     end
+
     session[:auto_complete] = controller_name.to_sym
     respond_to do |format|
       format.any(:js, :html)   { render :partial => 'auto_complete' }
-      format.json { render :json => @auto_complete.inject({}){|h,a| h[a.id] = a.name; h } }
+      format.json { render :json => @auto_complete.inject({}){|h,a|
+        h[a.id] = a.respond_to?(:full_name) ? a.full_name : a.name; h
+      }}
     end
   end
 
 private
+
+  #
+  # Takes { :related => 'campaigns/7' } or { :related => '5' }
+  #   and returns array of object ids that should be excluded from search
+  #   assumes controller_name is an method on 'related' class that returns a collection
+  #----------------------------------------------------------------------------
+  def auto_complete_ids_to_exclude(related)
+    return [] if related.blank?
+    return [related.to_i].compact unless related.index('/')
+    related_class, id = related.split('/')
+    obj = related_class.classify.constantize.find_by_id(id)
+    if obj and obj.respond_to?(controller_name)
+      obj.send(controller_name).map(&:id)
+    else
+      []
+    end
+  end
 
   #----------------------------------------------------------------------------
   def klass

@@ -1,3 +1,8 @@
+# Copyright (c) 2008-2013 Michael Dvorkin and contributors.
+#
+# Fat Free CRM is freely distributable under the terms of MIT license.
+# See MIT-LICENSE file or http://www.opensource.org/licenses/mit-license.php
+#------------------------------------------------------------------------------
 # == Schema Information
 #
 # Table name: fields
@@ -35,7 +40,7 @@ describe Field do
 
 
   it "should return a list of field types" do
-    Field.field_types['string'].should == {:type => :string, :options => nil}
+    Field.field_types['string'].should == {'klass' => 'CustomField', 'type' => 'string'}
   end
 
   it "should return a hash of input options" do

@@ -1,3 +1,8 @@
+# Copyright (c) 2008-2013 Michael Dvorkin and contributors.
+#
+# Fat Free CRM is freely distributable under the terms of MIT license.
+# See MIT-LICENSE file or http://www.opensource.org/licenses/mit-license.php
+#------------------------------------------------------------------------------
 # See the wiki for details: https://github.com/ryanb/cancan/wiki/Defining-Abilities
 
 class Ability
@@ -8,6 +13,7 @@ class Ability
       entities = [Account, Campaign, Contact, Lead, Opportunity]
 
       can :create, :all
+      can :read, [User] # for search autocomplete
       can :manage, entities, :access => 'Public'
       can :manage, entities + [Task], :user_id => user.id
       can :manage, entities + [Task], :assigned_to => user.id
